@@ -3,7 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OKX-Style NFT Minter</title>
+    <title>AI NFT Generator - Create Your NFT Collection on TON Testnet</title>
+    <meta name="description" content="No-code AI NFT generator to create and mint unique NFT collections on TON Testnet. Upload or generate images easily.">
+    <meta name="keywords" content="AI NFT generator, create NFT, NFT minter, TON Testnet, no-code NFT, NFT collection, AI art, mint NFT">
+    <meta name="author" content="NFT Minter Team">
+    <meta name="robots" content="index, follow">
+    <!-- Open Graph Tags for Social Media -->
+    <meta property="og:title" content="AI NFT Generator - Create Your NFT Collection on TON Testnet">
+    <meta property="og:description" content="No-code AI NFT generator to create and mint unique NFT collections on TON Testnet. Upload or generate images easily.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://nft-minter-production.up.railway.app/">
+    <meta property="og:image" content="https://nft-minter-production.up.railway.app/static/og-image.jpg">
+    <meta property="og:site_name" content="NFT Minter">
+    <!-- Twitter Card Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="AI NFT Generator - Create Your NFT Collection on TON Testnet">
+    <meta name="twitter:description" content="No-code AI NFT generator to create and mint unique NFT collections on TON Testnet. Upload or generate images easily.">
+    <meta name="twitter:image" content="https://nft-minter-production.up.railway.app/static/og-image.jpg">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -26,7 +42,7 @@
 <body class="bg-gray-900 text-white flex items-center justify-center min-h-screen">
     <div id="root"></div>
     <script type="text/babel">
-        const { useState, useRef } = React;
+        const { useState, useRef, useEffect } = React;
 
         function App() {
             const [step1Expanded, setStep1Expanded] = useState(true);
@@ -41,7 +57,20 @@
             const [ipfsImage, setIpfsImage] = useState("");
             const [ipfsMetadata, setIpfsMetadata] = useState("");
             const [nftUrl, setNftUrl] = useState("");
+            const [toast, setToast] = useState("");
+            const [logs, setLogs] = useState([]);
+            const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+            const [activeSidebarTab, setActiveSidebarTab] = useState("logs"); // logs or help
             const fileInputRef = useRef(null);
+            const [activeTab, setActiveTab] = useState("generate");
+
+            useEffect(() => {
+                if (toast) {
+                    setLogs((prevLogs) => [...prevLogs, { message: toast, timestamp: new Date().toLocaleTimeString() }]);
+                    const timer = setTimeout(() => setToast(""), 3000);
+                    return () => clearTimeout(timer);
+                }
+            }, [toast]);
 
             const generateImage = async () => {
                 setLoading(true);
@@ -51,12 +80,12 @@
                     const timestamp = Date.now();
                     setImageUrl(`/image/${response.data.filename}?t=${timestamp}`);
                     setFilename(response.data.filename);
-                    setMessage(response.data.message);
+                    setToast(response.data.message);
                     setEditMode(false);
                     setStep1Expanded(true);
                     setStep2Expanded(true);
                 } catch (error) {
-                    setMessage(`Error: ${error.response?.data?.detail || error.message}`);
+                    setToast(`Error: ${error.response?.data?.detail || error.message}`);
                 } finally {
                     setLoading(false);
                 }
@@ -77,15 +106,14 @@
                     const timestamp = Date.now();
                     setImageUrl(`/image/${response.data.filename}?t=${timestamp}`);
                     setFilename(response.data.filename);
-                    setMessage(response.data.message);
-                    setPrompt(""); // Clear prompt for uploaded images
+                    setToast(response.data.message);
+                    setPrompt("");
                     setStep1Expanded(true);
                     setStep2Expanded(true);
                 } catch (error) {
-                    setMessage(`Error: ${error.response?.data?.detail || error.message}`);
+                    setToast(`Error: ${error.response?.data?.detail || error.message}`);
                 } finally {
                     setLoading(false);
-                    // Reset file input
                     if (fileInputRef.current) fileInputRef.current.value = "";
                 }
             };
@@ -106,9 +134,9 @@
                     setIpfsImage(response.data.ipfs_image);
                     setIpfsMetadata(response.data.ipfs_metadata);
                     setFilename(response.data.filename);
-                    setMessage("Image and metadata uploaded to IPFS");
+                    setToast("Image and metadata uploaded to IPFS");
                 } catch (error) {
-                    setMessage(`Error: ${error.response?.data?.detail || error.message}`);
+                    setToast(`Error: ${error.response?.data?.detail || error.message}`);
                 } finally {
                     setLoading(false);
                 }
@@ -116,7 +144,7 @@
 
             const mintNFT = async () => {
                 if (!filename) {
-                    setMessage("Please generate or upload an image first");
+                    setToast("Please generate or upload an image first");
                     return;
                 }
                 setLoading(true);
@@ -127,8 +155,9 @@
                     setNftUrl(response.data.url);
                     setIpfsImage(response.data.ipfs_image);
                     setIpfsMetadata(response.data.ipfs_metadata);
+                    setToast(response.data.message);
                 } catch (error) {
-                    setMessage(`Error: ${error.response?.data?.detail || error.message}`);
+                    setToast(`Error: ${error.response?.data?.detail || error.message}`);
                 } finally {
                     setLoading(false);
                 }
@@ -143,7 +172,6 @@
 
                     {/* Accordion Sections */}
                     <div className="space-y-4">
-                        {/* Step 1: Generate or Upload Image & Upload to IPFS */}
                         <div className="bg-gray-700 rounded-lg">
                             <button
                                 onClick={() => setStep1Expanded(!step1Expanded)}
@@ -154,55 +182,85 @@
                             </button>
                             {step1Expanded && (
                                 <div className="p-4">
-                                    <p className="text-gray-400 mb-2">Enter a prompt to generate an NFT image (e.g., "owl in cyberpunk style") or upload your own image.</p>
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-medium text-gray-300">Generate Image</label>
-                                        <input
-                                            type="text"
-                                            value={prompt}
-                                            onChange={(e) => setPrompt(e.target.value)}
-                                            placeholder="Enter image prompt"
-                                            className="mt-1 block w-full p-3 bg-gray-700 border border-gray-600 rounded text-white"
-                                            disabled={!editMode && filename}
-                                        />
+                                    <div className="flex mb-4">
                                         <button
-                                            onClick={generateImage}
-                                            disabled={loading || !prompt}
-                                            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white p-3 rounded mt-4 hover:shadow-lg disabled:bg-gray-600"
+                                            onClick={() => setActiveTab("generate")}
+                                            className={`flex-1 p-2 rounded-l-lg ${activeTab === "generate" ? "bg-gradient-to-r from-blue-600 to-purple-600" : "bg-gray-600"}`}
                                         >
-                                            {loading ? "Generating..." : editMode ? "Save & Generate" : "Generate Image"}
+                                            Generate Image
+                                        </button>
+                                        <button
+                                            onClick={() => setActiveTab("upload")}
+                                            className={`flex-1 p-2 rounded-r-lg ${activeTab === "upload" ? "bg-gradient-to-r from-blue-600 to-purple-600" : "bg-gray-600"}`}
+                                        >
+                                            Upload Image
                                         </button>
                                     </div>
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-medium text-gray-300">Upload Image</label>
-                                        <input
-                                            type="file"
-                                            accept="image/png,image/jpeg"
-                                            onChange={uploadImage}
-                                            ref={fileInputRef}
-                                            className="mt-1 block w-full p-3 bg-gray-700 border border-gray-600 rounded text-white"
-                                            disabled={loading}
-                                        />
-                                        <p className="text-gray-400 text-sm mt-2">
-                                            Recommended for NFT images: PNG or JPEG, max 5MB, 512x512 or higher resolution, clear and unique artwork. Square images work best for NFT platforms.
-                                        </p>
+                                    <div className="min-h-[150px] flex flex-col">
+                                        {activeTab === "generate" && (
+                                            <>
+                                                <p className="text-gray-400 mb-2">Enter a prompt to generate your NFT image (e.g., "owl in cyberpunk style").</p>
+                                                <input
+                                                    type="text"
+                                                    value={prompt}
+                                                    onChange={(e) => setPrompt(e.target.value)}
+                                                    placeholder="Enter image prompt"
+                                                    className="mt-1 block w-full p-3 bg-gray-700 border border-gray-600 rounded text-white"
+                                                    disabled={!editMode && filename}
+                                                />
+                                                <button
+                                                    onClick={generateImage}
+                                                    disabled={loading || !prompt}
+                                                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white p-3 rounded mt-4 hover:shadow-lg disabled:bg-gray-600"
+                                                >
+                                                    {loading ? "Generating..." : editMode ? "Save & Generate" : "Generate Image"}
+                                                </button>
+                                            </>
+                                        )}
+                                        {activeTab === "upload" && (
+                                            <>
+                                                <label className="block text-sm font-medium text-gray-300">Upload Image</label>
+                                                <input
+                                                    type="file"
+                                                    accept="image/png,image/jpeg"
+                                                    onChange={uploadImage}
+                                                    ref={fileInputRef}
+                                                    className="mt-1 block w-full p-3 bg-gray-700 border border-gray-600 rounded text-white"
+                                                    disabled={loading}
+                                                />
+                                                <p className="text-gray-400 text-sm mt-2">
+                                                    Recommended for NFT images: PNG or JPEG, max 5MB, 512x512 or higher resolution, clear and unique artwork. Square images work best for NFT platforms.
+                                                </p>
+                                            </>
+                                        )}
                                     </div>
                                     {imageUrl && (
                                         <div className="mt-4">
-                                            <img src={imageUrl} alt="Generated or Uploaded" className="w-full rounded" onError={() => setMessage("Failed to load image")} />
-                                            <div className="flex mt-2">
-                                                <button
-                                                    onClick={editPrompt}
-                                                    className="flex-1 bg-gray-700 text-white p-2 rounded mr-2 hover:bg-gray-600"
+                                            <img src={imageUrl} alt="Generated or Uploaded" className="w-full rounded" onError={() => setToast("Failed to load image")} />
+                                            <div className="flex mt-2 space-x-2">
+                                                {activeTab === "generate" && (
+                                                    <>
+                                                        <button
+                                                            onClick={editPrompt}
+                                                            className="flex-1 bg-gray-700 text-white p-2 rounded hover:bg-gray-600"
+                                                        >
+                                                            Edit Prompt
+                                                        </button>
+                                                        <button
+                                                            onClick={regenerateImage}
+                                                            className="flex-1 bg-gray-700 text-white p-2 rounded hover:bg-gray-600"
+                                                        >
+                                                            Regenerate
+                                                        </button>
+                                                    </>
+                                                )}
+                                                <a
+                                                    href={imageUrl}
+                                                    download={filename}
+                                                    className="flex-1 bg-gray-700 text-white p-2 rounded hover:bg-gray-600 text-center"
                                                 >
-                                                    Edit Prompt
-                                                </button>
-                                                <button
-                                                    onClick={regenerateImage}
-                                                    className="flex-1 bg-gray-700 text-white p-2 rounded hover:bg-gray-600"
-                                                >
-                                                    Regenerate
-                                                </button>
+                                                    Download Image
+                                                </a>
                                             </div>
                                             <button
                                                 onClick={uploadToIpfs}
@@ -217,7 +275,6 @@
                             )}
                         </div>
 
-                        {/* Step 2: Enter TON Address & Mint NFT */}
                         <div className="bg-gray-700 rounded-lg">
                             <button
                                 onClick={() => setStep2Expanded(!step2Expanded)}
@@ -248,7 +305,6 @@
                         </div>
                     </div>
 
-                    {/* Expand All Button */}
                     <button
                         onClick={() => {
                             setStep1Expanded(true);
@@ -259,17 +315,124 @@
                         Expand All Steps
                     </button>
 
-                    {/* Results */}
-                    {message && <p className="mt-4 text-center text-red-400">{message}</p>}
-                    {nftUrl && (
-                        <p className="mt-4 text-center text-green-400">
-                            NFT URL: <a href={nftUrl} target="_blank" className="text-blue-400 underline">{nftUrl}</a>
-                        </p>
+                    <div className="lg:hidden mt-6">
+                        <h2 className="text-xl font-semibold mb-4">Logs & Results</h2>
+                        {message && <p className="text-red-400 mb-2">{message}</p>}
+                        {nftUrl && (
+                            <p className="text-green-400 mb-2">
+                                NFT URL: <a href={nftUrl} target="_blank" className="text-blue-400 underline">{nftUrl}</a>
+                            </p>
+                        )}
+                        {(ipfsImage || ipfsMetadata) && (
+                            <div className="text-gray-300">
+                                {ipfsImage && <p>IPFS Image: <a href={ipfsImage} target="_blank" className="text-blue-400 underline">{ipfsImage}</a></p>}
+                                {ipfsMetadata && <p>IPFS Metadata: <a href={ipfsMetadata} target="_blank" className="text-blue-400 underline">{ipfsMetadata}</a></p>}
+                            </div>
+                        )}
+                    </div>
+                    {toast && (
+                        <div className="fixed top-4 right-4 bg-green-600 text-white p-4 rounded shadow-lg">
+                            {toast}
+                        </div>
                     )}
-                    {(ipfsImage || ipfsMetadata) && (
-                        <div className="mt-4 text-center text-gray-300">
-                            {ipfsImage && <p>IPFS Image: <a href={ipfsImage} target="_blank" className="text-blue-400 underline">{ipfsImage}</a></p>}
-                            {ipfsMetadata && <p>IPFS Metadata: <a href={ipfsMetadata} target="_blank" className="text-blue-400 underline">{ipfsMetadata}</a></p>}
+                    <div className="fixed bottom-4 right-4 flex space-x-2">
+                        <button
+                            onClick={() => {
+                                setIsSidebarOpen(true);
+                                setActiveSidebarTab("logs");
+                            }}
+                            className={`p-3 rounded-l-full ${activeSidebarTab === "logs" && isSidebarOpen ? "bg-gradient-to-r from-blue-600 to-purple-600" : "bg-gray-600"} text-white shadow-lg hover:shadow-xl`}
+                        >
+                            Open Logs
+                        </button>
+                        <button
+                            onClick={() => {
+                                setIsSidebarOpen(true);
+                                setActiveSidebarTab("help");
+                            }}
+                            className={`p-3 rounded-r-full ${activeSidebarTab === "help" && isSidebarOpen ? "bg-gradient-to-r from-blue-600 to-purple-600" : "bg-gray-600"} text-white shadow-lg hover:shadow-xl`}
+                        >
+                            Help
+                        </button>
+                    </div>
+                    {isSidebarOpen && (
+                        <div className="fixed top-0 right-0 h-full w-80 bg-gray-700 p-4 overflow-y-auto shadow-lg">
+                            <div className="flex justify-between items-center mb-4">
+                                <div className="flex space-x-2">
+                                    <button
+                                        onClick={() => setActiveSidebarTab("logs")}
+                                        className={`px-4 py-2 ${activeSidebarTab === "logs" ? "bg-gradient-to-r from-blue-600 to-purple-600" : "bg-gray-600"} rounded-t-lg text-white`}
+                                    >
+                                        Logs
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveSidebarTab("help")}
+                                        className={`px-4 py-2 ${activeSidebarTab === "help" ? "bg-gradient-to-r from-blue-600 to-purple-600" : "bg-gray-600"} rounded-t-lg text-white`}
+                                    >
+                                        Help
+                                    </button>
+                                </div>
+                                <button
+                                    onClick={() => setIsSidebarOpen(false)}
+                                    className="bg-gradient-to-r from-red-600 to-red-800 text-white p-2 rounded-full hover:shadow-lg"
+                                >
+                                    Close
+                                </button>
+                            </div>
+                            {activeSidebarTab === "logs" && (
+                                <div>
+                                    <h2 className="text-xl font-semibold mb-4">Logs & Results</h2>
+                                    {logs.length > 0 ? (
+                                        logs.map((log, index) => (
+                                            <p key={index} className={`mb-2 ${log.message.includes("Error") ? "text-red-400" : "text-gray-300"}`}>
+                                                [{log.timestamp}] {log.message}
+                                            </p>
+                                        ))
+                                    ) : (
+                                        <p className="text-gray-400">No logs yet</p>
+                                    )}
+                                    {nftUrl && (
+                                        <p className="text-green-400 mb-2">
+                                            NFT URL: <a href={nftUrl} target="_blank" className="text-blue-400 underline">{nftUrl}</a>
+                                        </p>
+                                    )}
+                                    {(ipfsImage || ipfsMetadata) && (
+                                        <div className="text-gray-300">
+                                            {ipfsImage && <p>IPFS Image: <a href={ipfsImage} target="_blank" className="text-blue-400 underline">{ipfsImage}</a></p>}
+                                            {ipfsMetadata && <p>IPFS Metadata: <a href={ipfsMetadata} target="_blank" className="text-blue-400 underline">{ipfsMetadata}</a></p>}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                            {activeSidebarTab === "help" && (
+                                <div>
+                                    <h2 className="text-xl font-semibold mb-4">How to Create an NFT</h2>
+                                    <ol className="list-decimal pl-5 text-gray-300 space-y-2">
+                                        <li>
+                                            <strong>Generate or Upload an Image:</strong>
+                                            <ul className="list-disc pl-5 mt-1">
+                                                <li>In the "Generate Image" tab, enter a prompt (e.g., "owl in cyberpunk style") and click "Generate Image".</li>
+                                                <li>In the "Upload Image" tab, upload a PNG or JPEG image (max 5MB, 512x512 or higher recommended).</li>
+                                            </ul>
+                                        </li>
+                                        <li>
+                                            <strong>Review and Download:</strong> Once the image is generated or uploaded, it will display. You can download it using the "Download Image" button.
+                                        </li>
+                                        <li>
+                                            <strong>Upload to IPFS:</strong> Click "Upload to IPFS" to store your image and metadata on the InterPlanetary File System for decentralized storage.
+                                        </li>
+                                        <li>
+                                            <strong>Mint Your NFT:</strong> In the "Enter TON Address & Mint NFT" section, optionally enter a Testnet TON wallet address. Click "Mint NFT" to create your NFT on the TON Testnet. If no address is provided, it mints to a default collection.
+                                        </li>
+                                        <li>
+                                            <strong>Check Results:</strong> View logs in the "Logs" tab of the sidebar for details on each step, including IPFS links and NFT URL.
+                                        </li>
+                                    </ol>
+                                    <p className="text-gray-400 mt-4">
+                                        <strong>Note:</strong> Ensure your image is clear, unique, and square (e.g., 512x512) for the best NFT results. Use a Testnet TON wallet for minting.
+                                    </p>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>

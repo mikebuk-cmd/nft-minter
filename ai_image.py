@@ -3,6 +3,7 @@ import os
 from dotenv import load_dotenv
 import time
 import logging
+import tempfile
 
 # Настройка логирования
 logging.basicConfig(filename="bot.log", level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -32,11 +33,12 @@ def generate_image(prompt: str) -> str:
 
         # Генерируем уникальное имя файла с временной меткой
         timestamp = int(time.time() * 1000)
-        filename = os.path.join(os.path.dirname(__file__), f"output_{timestamp}.png")
-        with open(filename, "wb") as f:
+        filename = f"output_{timestamp}.png"
+        output_path = os.path.join(tempfile.gettempdir(), filename)  # Use platform-appropriate temp directory
+        with open(output_path, "wb") as f:
             f.write(response.content)
 
-        logging.info(f"Image generated and saved as {filename}")
+        logging.info(f"Image generated and saved as {output_path}")
         return filename
     except requests.exceptions.RequestException as e:
         logging.error(f"Error generating image: {str(e)}")

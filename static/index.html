@@ -177,6 +177,16 @@
                 }
             };
 
+            const handleTabChange = (tab) => {
+                setActiveTab(tab);
+                if (tab === "generate") {
+                    setFilename(""); // Reset filename to enable input and button
+                    setImageUrl("");
+                    setEditMode(false);
+                    setPrompt("");
+                }
+            };
+
             return (
                 <div className="container mx-auto p-6 max-w-3xl bg-gray-800 rounded-xl shadow-2xl">
                     <h1 className="text-4xl font-bold mb-6 text-center text-white">NFT Minter - Powered by TON Testnet</h1>
@@ -197,13 +207,13 @@
                                 <div className="p-4">
                                     <div className="flex mb-4">
                                         <button
-                                            onClick={() => setActiveTab("generate")}
+                                            onClick={() => handleTabChange("generate")}
                                             className={`flex-1 p-2 rounded-l-lg ${activeTab === "generate" ? "bg-gradient-to-r from-blue-600 to-purple-600" : "bg-gray-600"}`}
                                         >
                                             Generate Image
                                         </button>
                                         <button
-                                            onClick={() => setActiveTab("upload")}
+                                            onClick={() => handleTabChange("upload")}
                                             className={`flex-1 p-2 rounded-r-lg ${activeTab === "upload" ? "bg-gradient-to-r from-blue-600 to-purple-600" : "bg-gray-600"}`}
                                         >
                                             Upload Image

@@ -91,9 +91,9 @@ async def upload_to_ipfs_endpoint(request: IpfsUploadRequest):
             raise HTTPException(status_code=400, detail="Filename is required")
         
         # Validate filename format
-        if not re.match(r"^uploaded_\d+\.(png|jpg)$", request.filename):
+        if not re.match(r"^(uploaded|output)_\d+\.(png|jpg)$", request.filename):
             logging.error(f"Invalid filename format: {request.filename}")
-            raise HTTPException(status_code=400, detail=f"Invalid filename format: {request.filename}. Expected 'uploaded_<timestamp>.png' or 'uploaded_<timestamp>.jpg'")
+            raise HTTPException(status_code=400, detail=f"Invalid filename format: {request.filename}. Expected 'uploaded_<timestamp>.png', 'uploaded_<timestamp>.jpg', or 'output_<timestamp>.png'")
         
         file_path = os.path.join(tempfile.gettempdir(), request.filename)
         if not os.path.exists(file_path):

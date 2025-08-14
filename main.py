@@ -32,11 +32,17 @@ class GenerateImageRequest(BaseModel):
 class IpfsUploadRequest(BaseModel):
     filename: str
     prompt: str | None = None
+    name: str | None = None
+    description: str | None = None
+    attribute: str | None = None
 
 class MintNFTRequest(BaseModel):
     address: str | None = None
     filename: str
     prompt: str | None = None
+    name: str | None = None
+    description: str | None = None
+    attribute: str | None = None
 
 @app.post("/generate-image")
 async def generate_image_endpoint(request: GenerateImageRequest):
@@ -85,7 +91,7 @@ async def upload_image_endpoint(file: UploadFile = File(...)):
 @app.post("/upload-to-ipfs")
 async def upload_to_ipfs_endpoint(request: IpfsUploadRequest):
     try:
-        logging.info(f"Received IPFS upload request: filename={request.filename}, prompt={request.prompt}")
+        logging.info(f"Received IPFS upload request: filename={request.filename}, prompt={request.prompt}, name={request.name}, description={request.description}, attribute={request.attribute}")
         if not request.filename:
             logging.error("Filename is empty or missing")
             raise HTTPException(status_code=400, detail="Filename is required")
@@ -103,8 +109,12 @@ async def upload_to_ipfs_endpoint(request: IpfsUploadRequest):
         ipfs_image = upload_image_to_ipfs(file_path)
         logging.info(f"Image uploaded to IPFS: {ipfs_image}")
         
-        description = f"Generated from: {request.prompt}" if request.prompt else "Uploaded image"
-        ipfs_metadata = upload_metadata_to_ipfs("Open Hack NFT", description, ipfs_image)
+        # Set default values if not provided
+        name = request.name or "Open Hack NFT"
+        description = request.description or (f"Generated from: {request.prompt}" if request.prompt else "Uploaded image")
+        attributes = [{"trait_type": "Background", "value": request.attribute or "Neon"}]
+        
+        ipfs_metadata = upload_metadata_to_ipfs(name, description, ipfs_image, attributes)
         logging.info(f"Metadata uploaded to IPFS: {ipfs_metadata}")
         
         return {"ipfs_image": ipfs_image, "ipfs_metadata": ipfs_metadata, "filename": request.filename}
@@ -130,11 +140,15 @@ async def mint_nft_endpoint(request: MintNFTRequest):
         ipfs_image = upload_image_to_ipfs(file_path)
         logging.info(f"Image uploaded to IPFS: {ipfs_image}")
         
-        description = f"Generated from: {request.prompt}" if request.prompt else "Uploaded image"
-        ipfs_metadata = upload_metadata_to_ipfs("Open Hack NFT", description, ipfs_image)
+        # Set default values if not provided
+        name = request.name or "Open Hack NFT"
+        description = request.description or (f"Generated from: {request.prompt}" if request.prompt else "Uploaded image")
+        attributes = [{"trait_type": "Background", "value": request.attribute or "Neon"}]
+        
+        ipfs_metadata = upload_metadata_to_ipfs(name, description, ipfs_image, attributes)
         logging.info(f"Metadata uploaded to IPFS: {ipfs_metadata}")
         
-        result = mint_nft(request.address, ipfs_image, ipfs_metadata, name="Open Hack NFT", description=description)
+        result = mint_nft(request.address, ipfs_image, ipfs_metadata, name=name, description=description, attributes=attributes)
         logging.info(f"Mint result: {result}")
         
         if result.get("success"):

@@ -52,6 +52,9 @@
             const [tonAddress, setTonAddress] = useState("");
             const [imageUrl, setImageUrl] = useState("");
             const [filename, setFilename] = useState("");
+            const [name, setName] = useState("");
+            const [description, setDescription] = useState("");
+            const [attribute, setAttribute] = useState("");
             const [message, setMessage] = useState("");
             const [loading, setLoading] = useState(false);
             const [ipfsImage, setIpfsImage] = useState("");
@@ -138,8 +141,15 @@
                 setLoading(true);
                 setMessage("");
                 try {
-                    console.log("Sending to /upload-to-ipfs:", { filename, prompt: prompt || null });
-                    const response = await axios.post("/upload-to-ipfs", { filename, prompt: prompt || null });
+                    const metadata = {
+                        filename,
+                        prompt: prompt || null,
+                        name: name || null,
+                        description: description || null,
+                        attribute: attribute || null
+                    };
+                    console.log("Sending to /upload-to-ipfs:", metadata);
+                    const response = await axios.post("/upload-to-ipfs", metadata);
                     console.log("IPFS upload response:", response.data);
                     setIpfsImage(response.data.ipfs_image);
                     setIpfsMetadata(response.data.ipfs_metadata);
@@ -162,7 +172,15 @@
                 setLoading(true);
                 setMessage("");
                 try {
-                    const response = await axios.post("/mint-nft", { address: tonAddress || null, filename, prompt: prompt || null });
+                    const metadata = {
+                        address: tonAddress || null,
+                        filename,
+                        prompt: prompt || null,
+                        name: name || null,
+                        description: description || null,
+                        attribute: attribute || null
+                    };
+                    const response = await axios.post("/mint-nft", metadata);
                     setMessage(response.data.message);
                     setNftUrl(response.data.url);
                     setIpfsImage(response.data.ipfs_image);
@@ -180,10 +198,13 @@
             const handleTabChange = (tab) => {
                 setActiveTab(tab);
                 if (tab === "generate") {
-                    setFilename(""); // Reset filename to enable input and button
+                    setFilename("");
                     setImageUrl("");
                     setEditMode(false);
                     setPrompt("");
+                    setName("");
+                    setDescription("");
+                    setAttribute("");
                 }
             };
 
@@ -191,7 +212,7 @@
                 <div className="container mx-auto p-6 max-w-3xl bg-gray-800 rounded-xl shadow-2xl">
                     <h1 className="text-4xl font-bold mb-6 text-center text-white">NFT Minter - Powered by TON Testnet</h1>
                     <p className="text-gray-300 mb-6 text-center">
-                        Generate or upload an image, then mint it as an NFT on TON Testnet. Use a Testnet TON wallet address. If no address provided, NFT mints to default collection.
+                        Generate or upload an image, then mint it as an NFT on TON Testnet. Use a Testnet TON wallet address. If no address is provided, the NFT will be minted to the default collection.
                     </p>
 
                     <div className="space-y-4">
@@ -231,6 +252,41 @@
                                                     className="mt-1 block w-full p-3 bg-gray-700 border border-gray-600 rounded text-white"
                                                     disabled={!editMode && filename}
                                                 />
+                                                <div className="mt-4">
+                                                    <label className="block text-sm font-medium text-gray-300">NFT Name</label>
+                                                    <input
+                                                        type="text"
+                                                        value={name}
+                                                        onChange={(e) => setName(e.target.value)}
+                                                        placeholder="Enter NFT name (optional)"
+                                                        className="mt-1 block w-full p-3 bg-gray-700 border border-gray-600 rounded text-white"
+                                                        title="The name of your NFT, e.g., 'Cyber Owl #1'. Leave blank for default."
+                                                    />
+                                                    <p className="text-gray-400 text-sm mt-1">The name of your NFT, e.g., "Cyber Owl #1". Leave blank for default.</p>
+                                                </div>
+                                                <div className="mt-4">
+                                                    <label className="block text-sm font-medium text-gray-300">NFT Description</label>
+                                                    <textarea
+                                                        value={description}
+                                                        onChange={(e) => setDescription(e.target.value)}
+                                                        placeholder="Enter NFT description (optional)"
+                                                        className="mt-1 block w-full p-3 bg-gray-700 border border-gray-600 rounded text-white"
+                                                        title="A brief description of your NFT, e.g., 'AI-generated owl in cyberpunk style'. Leave blank for default."
+                                                    />
+                                                    <p className="text-gray-400 text-sm mt-1">A brief description of your NFT, e.g., "AI-generated owl in cyberpunk style". Leave blank for default.</p>
+                                                </div>
+                                                <div className="mt-4">
+                                                    <label className="block text-sm font-medium text-gray-300">NFT Attribute</label>
+                                                    <input
+                                                        type="text"
+                                                        value={attribute}
+                                                        onChange={(e) => setAttribute(e.target.value)}
+                                                        placeholder="Enter attribute, e.g., 'Background: Neon' (optional)"
+                                                        className="mt-1 block w-full p-3 bg-gray-700 border border-gray-600 rounded text-white"
+                                                        title="An attribute for your NFT, e.g., 'Background: Neon'. Leave blank for default."
+                                                    />
+                                                    <p className="text-gray-400 text-sm mt-1">An attribute for your NFT, e.g., "Background: Neon". Leave blank for default.</p>
+                                                </div>
                                                 <button
                                                     onClick={generateImage}
                                                     disabled={loading || !prompt}
@@ -254,6 +310,41 @@
                                                 <p className="text-gray-400 text-sm mt-2">
                                                     Recommended for NFT images: PNG or JPEG, max 5MB, 512x512 or higher resolution, clear and unique artwork. Square images work best for NFT platforms.
                                                 </p>
+                                                <div className="mt-4">
+                                                    <label className="block text-sm font-medium text-gray-300">NFT Name</label>
+                                                    <input
+                                                        type="text"
+                                                        value={name}
+                                                        onChange={(e) => setName(e.target.value)}
+                                                        placeholder="Enter NFT name (optional)"
+                                                        className="mt-1 block w-full p-3 bg-gray-700 border border-gray-600 rounded text-white"
+                                                        title="The name of your NFT, e.g., 'Cyber Owl #1'. Leave blank for default."
+                                                    />
+                                                    <p className="text-gray-400 text-sm mt-1">The name of your NFT, e.g., "Cyber Owl #1". Leave blank for default.</p>
+                                                </div>
+                                                <div className="mt-4">
+                                                    <label className="block text-sm font-medium text-gray-300">NFT Description</label>
+                                                    <textarea
+                                                        value={description}
+                                                        onChange={(e) => setDescription(e.target.value)}
+                                                        placeholder="Enter NFT description (optional)"
+                                                        className="mt-1 block w-full p-3 bg-gray-700 border border-gray-600 rounded text-white"
+                                                        title="A brief description of your NFT, e.g., 'Unique uploaded artwork'. Leave blank for default."
+                                                    />
+                                                    <p className="text-gray-400 text-sm mt-1">A brief description of your NFT, e.g., "Unique uploaded artwork". Leave blank for default.</p>
+                                                </div>
+                                                <div className="mt-4">
+                                                    <label className="block text-sm font-medium text-gray-300">NFT Attribute</label>
+                                                    <input
+                                                        type="text"
+                                                        value={attribute}
+                                                        onChange={(e) => setAttribute(e.target.value)}
+                                                        placeholder="Enter attribute, e.g., 'Background: Neon' (optional)"
+                                                        className="mt-1 block w-full p-3 bg-gray-700 border border-gray-600 rounded text-white"
+                                                        title="An attribute for your NFT, e.g., 'Background: Neon'. Leave blank for default."
+                                                    />
+                                                    <p className="text-gray-400 text-sm mt-1">An attribute for your NFT, e.g., "Background: Neon". Leave blank for default.</p>
+                                                </div>
                                             </>
                                         )}
                                     </div>
@@ -308,7 +399,7 @@
                             </button>
                             {step2Expanded && (
                                 <div className="p-4">
-                                    <p className="text-gray-400 mb-2">Enter your Testnet TON wallet address (optional). If left blank, NFT mints to default collection.</p>
+                                    <p className="text-gray-400 mb-2">Enter your Testnet TON wallet address (optional). If left blank, the NFT will be minted to the default collection.</p>
                                     <input
                                         type="text"
                                         value={tonAddress}
@@ -439,13 +530,16 @@
                                             </ul>
                                         </li>
                                         <li>
-                                            <strong>Review and Download:</strong> Once the image is generated or uploaded, it will display. You can download it using the "Download Image" button.
+                                            <strong>Add Metadata:</strong> Fill in the NFT name, description, and attribute (optional). Leave blank for default values.
+                                        </li>
+                                        <li>
+                                            <strong>Review and Download:</strong> Once the image is generated or uploaded, it will be displayed. You can download it using the "Download Image" button.
                                         </li>
                                         <li>
                                             <strong>Upload to IPFS:</strong> Click "Upload to IPFS" to store your image and metadata on the InterPlanetary File System for decentralized storage.
                                         </li>
                                         <li>
-                                            <strong>Mint Your NFT:</strong> In the "Enter TON Address & Mint NFT" section, optionally enter a Testnet TON wallet address. Click "Mint NFT" to create your NFT on the TON Testnet. If no address is provided, it mints to a default collection.
+                                            <strong>Mint Your NFT:</strong> In the "Enter TON Address & Mint NFT" section, optionally enter a Testnet TON wallet address. Click "Mint NFT" to create your NFT on the TON Testnet. If no address is provided, it will be minted to the default collection.
                                         </li>
                                         <li>
                                             <strong>Check Results:</strong> View logs in the "Logs" tab of the sidebar for details on each step, including IPFS links and NFT URL.

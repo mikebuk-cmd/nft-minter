@@ -5,17 +5,22 @@ import json
 import logging
 import time
 
-# Настройка логирования
-logging.basicConfig(filename="bot.log", level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+# Setup logging
+logging.basicConfig(filename="app.log", level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-# Загружаем переменные из .env файла
+# Load environment variables
 load_dotenv()
 
 def upload_image_to_ipfs(image_path: str) -> str:
     api_key = os.getenv("PINATA_API_KEY")
     secret_key = os.getenv("PINATA_SECRET_API_KEY")
     if not api_key or not secret_key:
-        raise ValueError("❌ PINATA_API_KEY или PINATA_SECRET_API_KEY не установлены в .env")
+        logging.error("PINATA_API_KEY or PINATA_SECRET_API_KEY not set in .env")
+        raise ValueError("PINATA_API_KEY or PINATA_SECRET_API_KEY not set in .env")
+
+    if not os.path.exists(image_path):
+        logging.error(f"Image file not found: {image_path}")
+        raise FileNotFoundError(f"Image file not found: {image_path}")
 
     url = "https://api.pinata.cloud/pinning/pinFileToIPFS"
     headers = {
@@ -29,34 +34,33 @@ def upload_image_to_ipfs(image_path: str) -> str:
             response.raise_for_status()
             ipfs_hash = response.json().get("IpfsHash")
             if not ipfs_hash:
-                raise ValueError("❌ Не удалось получить IPFS hash для изображения")
+                logging.error("Failed to get IPFS hash for image")
+                raise ValueError("Failed to get IPFS hash for image")
             ipfs_url = f"https://ipfs.io/ipfs/{ipfs_hash}"
             logging.info(f"Image uploaded to IPFS: {ipfs_url}")
-            # Задержка для обеспечения доступности на IPFS
-            time.sleep(5)
-            # Проверяем доступность изображения
+            time.sleep(5)  # Wait for IPFS availability
             response = requests.head(ipfs_url, timeout=10)
             if response.status_code != 200:
+                logging.error(f"Image URL {ipfs_url} is not accessible: {response.status_code}")
                 raise ValueError(f"Image URL {ipfs_url} is not accessible: {response.status_code}")
             return ipfs_url
         except requests.exceptions.RequestException as e:
-            logging.error(f"Error uploading image to IPFS: {str(e)}")
+            logging.error(f"Error uploading image to IPFS: {str(e)}", exc_info=True)
             raise
 
-def upload_metadata_to_ipfs(name: str, description: str, image_ipfs: str) -> str:
+def upload_metadata_to_ipfs(name: str, description: str, image_ipfs: str, attributes: list) -> str:
     api_key = os.getenv("PINATA_API_KEY")
     secret_key = os.getenv("PINATA_SECRET_API_KEY")
     if not api_key or not secret_key:
-        raise ValueError("❌ PINATA_API_KEY или PINATA_SECRET_API_KEY не установлены в .env")
+        logging.error("PINATA_API_KEY or PINATA_SECRET_API_KEY not set in .env")
+        raise ValueError("PINATA_API_KEY or PINATA_SECRET_API_KEY not set in .env")
 
-    # Формируем метаданные согласно спецификации GetGems
     metadata = {
         "name": name,
         "description": description,
         "image": image_ipfs,
-        "attributes": [{"trait_type": "Background", "value": "Neon"}]
+        "attributes": attributes
     }
-    metadata_json = json.dumps(metadata, ensure_ascii=False)
     url = "https://api.pinata.cloud/pinning/pinJSONToIPFS"
     headers = {
         "pinata_api_key": api_key,
@@ -69,16 +73,16 @@ def upload_metadata_to_ipfs(name: str, description: str, image_ipfs: str) -> str
         response.raise_for_status()
         ipfs_hash = response.json().get("IpfsHash")
         if not ipfs_hash:
-            raise ValueError("❌ Не удалось получить IPFS hash для метаданных")
+            logging.error("Failed to get IPFS hash for metadata")
+            raise ValueError("Failed to get IPFS hash for metadata")
         ipfs_url = f"https://ipfs.io/ipfs/{ipfs_hash}"
         logging.info(f"Metadata uploaded to IPFS: {ipfs_url}")
-        # Задержка для обеспечения доступности на IPFS
-        time.sleep(5)
-        # Проверяем доступность метаданных
+        time.sleep(5)  # Wait for IPFS availability
         response = requests.get(ipfs_url, timeout=10)
         if response.status_code != 200:
+            logging.error(f"Metadata URL {ipfs_url} is not accessible: {response.status_code}")
             raise ValueError(f"Metadata URL {ipfs_url} is not accessible: {response.status_code}")
         return ipfs_url
     except requests.exceptions.RequestException as e:
-        logging.error(f"Error uploading metadata to IPFS: {str(e)}")
+        logging.error(f"Error uploading metadata to IPFS: {str(e)}", exc_info=True)
         raise

@@ -29,10 +29,14 @@ TON_RECIPIENT = os.getenv("TON_RECIPIENT", "0QCpruqZYuBMmCBrPTL2WOnQlMcJ5rQil4no
 class GenerateImageRequest(BaseModel):
     prompt: str
 
+class IpfsUploadRequest(BaseModel):
+    filename: str
+    prompt: str | None = None
+
 class MintNFTRequest(BaseModel):
     address: str | None = None
     filename: str
-    prompt: str | None = None  # Make prompt optional for uploaded images
+    prompt: str | None = None
 
 @app.post("/generate-image")
 async def generate_image_endpoint(request: GenerateImageRequest):
@@ -45,7 +49,7 @@ async def generate_image_endpoint(request: GenerateImageRequest):
         logging.info(f"Generated image: {filename}")
         return {"filename": filename, "message": "Image generated successfully"}
     except Exception as e:
-        logging.error(f"Error generating image: {str(e)}")
+        logging.error(f"Error generating image: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/upload-image")
@@ -75,32 +79,38 @@ async def upload_image_endpoint(file: UploadFile = File(...)):
         logging.info(f"Image uploaded and saved as {file_path}")
         return {"filename": filename, "message": "Image uploaded successfully"}
     except Exception as e:
-        logging.error(f"Error uploading image: {str(e)}")
+        logging.error(f"Error uploading image: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/upload-to-ipfs")
-async def upload_to_ipfs_endpoint(request: GenerateImageRequest | None = None):
+async def upload_to_ipfs_endpoint(request: IpfsUploadRequest):
     try:
-        if request and request.prompt:
-            filename = generate_image(request.prompt)
-        else:
-            raise HTTPException(status_code=400, detail="No prompt provided for generation and no uploaded image available")
+        logging.info(f"Received IPFS upload request: filename={request.filename}, prompt={request.prompt}")
+        if not request.filename:
+            logging.error("Filename is empty or missing")
+            raise HTTPException(status_code=400, detail="Filename is required")
         
-        file_path = os.path.join(tempfile.gettempdir(), filename)
+        # Validate filename format
+        if not re.match(r"^uploaded_\d+\.(png|jpg)$", request.filename):
+            logging.error(f"Invalid filename format: {request.filename}")
+            raise HTTPException(status_code=400, detail=f"Invalid filename format: {request.filename}. Expected 'uploaded_<timestamp>.png' or 'uploaded_<timestamp>.jpg'")
+        
+        file_path = os.path.join(tempfile.gettempdir(), request.filename)
         if not os.path.exists(file_path):
             logging.error(f"Image file not found: {file_path}")
-            raise HTTPException(status_code=500, detail="Image file not found")
+            raise HTTPException(status_code=400, detail=f"Image file not found: {request.filename}")
         
         ipfs_image = upload_image_to_ipfs(file_path)
         logging.info(f"Image uploaded to IPFS: {ipfs_image}")
         
-        ipfs_metadata = upload_metadata_to_ipfs("Open Hack NFT", f"Generated from: {request.prompt if request else 'Uploaded image'}", ipfs_image)
+        description = f"Generated from: {request.prompt}" if request.prompt else "Uploaded image"
+        ipfs_metadata = upload_metadata_to_ipfs("Open Hack NFT", description, ipfs_image)
         logging.info(f"Metadata uploaded to IPFS: {ipfs_metadata}")
         
-        return {"ipfs_image": ipfs_image, "ipfs_metadata": ipfs_metadata, "filename": filename}
+        return {"ipfs_image": ipfs_image, "ipfs_metadata": ipfs_metadata, "filename": request.filename}
     except Exception as e:
-        logging.error(f"Error uploading to IPFS: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logging.error(f"Error uploading to IPFS: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"IPFS upload failed: {str(e)}")
 
 @app.post("/mint-nft")
 async def mint_nft_endpoint(request: MintNFTRequest):
@@ -120,10 +130,11 @@ async def mint_nft_endpoint(request: MintNFTRequest):
         ipfs_image = upload_image_to_ipfs(file_path)
         logging.info(f"Image uploaded to IPFS: {ipfs_image}")
         
-        ipfs_metadata = upload_metadata_to_ipfs("Open Hack NFT", f"Generated from: {request.prompt if request.prompt else 'Uploaded image'}", ipfs_image)
+        description = f"Generated from: {request.prompt}" if request.prompt else "Uploaded image"
+        ipfs_metadata = upload_metadata_to_ipfs("Open Hack NFT", description, ipfs_image)
         logging.info(f"Metadata uploaded to IPFS: {ipfs_metadata}")
         
-        result = mint_nft(request.address, ipfs_image, ipfs_metadata, name="Open Hack NFT", description=f"Generated from: {request.prompt if request.prompt else 'Uploaded image'}")
+        result = mint_nft(request.address, ipfs_image, ipfs_metadata, name="Open Hack NFT", description=description)
         logging.info(f"Mint result: {result}")
         
         if result.get("success"):
@@ -138,7 +149,7 @@ async def mint_nft_endpoint(request: MintNFTRequest):
             logging.error(f"Minting error: {result}")
             raise HTTPException(status_code=500, detail=f"Minting error: {result}")
     except Exception as e:
-        logging.error(f"Error during minting: {str(e)}")
+        logging.error(f"Error during minting: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/image/{filename}")

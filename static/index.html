@@ -60,7 +60,7 @@
             const [toast, setToast] = useState("");
             const [logs, setLogs] = useState([]);
             const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-            const [activeSidebarTab, setActiveSidebarTab] = useState("logs"); // logs or help
+            const [activeSidebarTab, setActiveSidebarTab] = useState("logs");
             const fileInputRef = useRef(null);
             const [activeTab, setActiveTab] = useState("generate");
 
@@ -85,7 +85,9 @@
                     setStep1Expanded(true);
                     setStep2Expanded(true);
                 } catch (error) {
-                    setToast(`Error: ${error.response?.data?.detail || error.message}`);
+                    const errorMessage = error.response?.data?.detail?.[0]?.msg || error.response?.data?.detail || error.response?.data?.error || error.message || JSON.stringify(error.response?.data || error);
+                    setToast(`Error: ${errorMessage}`);
+                    console.error("Generate Image Error:", error, error.response?.data);
                 } finally {
                     setLoading(false);
                 }
@@ -111,7 +113,9 @@
                     setStep1Expanded(true);
                     setStep2Expanded(true);
                 } catch (error) {
-                    setToast(`Error: ${error.response?.data?.detail || error.message}`);
+                    const errorMessage = error.response?.data?.detail?.[0]?.msg || error.response?.data?.detail || error.response?.data?.error || error.message || JSON.stringify(error.response?.data || error);
+                    setToast(`Error: ${errorMessage}`);
+                    console.error("Upload Image Error:", error, error.response?.data);
                 } finally {
                     setLoading(false);
                     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -127,16 +131,24 @@
             };
 
             const uploadToIpfs = async () => {
+                if (!filename) {
+                    setToast("Please generate or upload an image first");
+                    return;
+                }
                 setLoading(true);
                 setMessage("");
                 try {
-                    const response = await axios.post("/upload-to-ipfs", prompt ? { prompt } : {});
+                    console.log("Sending to /upload-to-ipfs:", { filename, prompt: prompt || null });
+                    const response = await axios.post("/upload-to-ipfs", { filename, prompt: prompt || null });
+                    console.log("IPFS upload response:", response.data);
                     setIpfsImage(response.data.ipfs_image);
                     setIpfsMetadata(response.data.ipfs_metadata);
                     setFilename(response.data.filename);
                     setToast("Image and metadata uploaded to IPFS");
                 } catch (error) {
-                    setToast(`Error: ${error.response?.data?.detail || error.message}`);
+                    const errorMessage = error.response?.data?.detail?.[0]?.msg || error.response?.data?.detail || error.response?.data?.error || error.message || JSON.stringify(error.response?.data || error);
+                    setToast(`Error: ${errorMessage}`);
+                    console.error("IPFS Upload Error:", error, error.response?.data);
                 } finally {
                     setLoading(false);
                 }
@@ -157,7 +169,9 @@
                     setIpfsMetadata(response.data.ipfs_metadata);
                     setToast(response.data.message);
                 } catch (error) {
-                    setToast(`Error: ${error.response?.data?.detail || error.message}`);
+                    const errorMessage = error.response?.data?.detail?.[0]?.msg || error.response?.data?.detail || error.response?.data?.error || error.message || JSON.stringify(error.response?.data || error);
+                    setToast(`Error: ${errorMessage}`);
+                    console.error("Mint NFT Error:", error, error.response?.data);
                 } finally {
                     setLoading(false);
                 }
@@ -170,7 +184,6 @@
                         Generate or upload an image, then mint it as an NFT on TON Testnet. Use a Testnet TON wallet address. If no address provided, NFT mints to default collection.
                     </p>
 
-                    {/* Accordion Sections */}
                     <div className="space-y-4">
                         <div className="bg-gray-700 rounded-lg">
                             <button
@@ -435,6 +448,9 @@
                             )}
                         </div>
                     )}
+                    <footer className="mt-8 py-4 text-center text-gray-400">
+                        <p>Contact us: <a href="https://t.me/mike1b" target="_blank" className="text-blue-400 underline">@mike1b</a></p>
+                    </footer>
                 </div>
             );
         }
